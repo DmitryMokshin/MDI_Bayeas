@@ -5,13 +5,13 @@ from pysme.linelist.vald import ValdFile
 import time
 from pysme.synthesize import synthesize_spectrum
 
-from tqdm import tqdm
 import zarr
 
 import astropy.constants as const
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
-import matplotlib.pyplot as plt
+
+from joblib import Parallel, delayed
 
 
 def make_name_of_vald_list(temperature, range_wavelength, microturbulence_velocity=4.0, log_grav=4.4):
@@ -95,7 +95,11 @@ def generate_spec_pysme(temperature, mu_array, regions):
     vald = ValdFile('Line_list/' + name_linelist)
     sme.linelist = vald
 
-    sme.atmo.source = "marcs2012p_t1.0.sav"
+    if temperature > 8000:
+        sme.atmo.source = "atlas9_vmic2.0.sav"
+    else:
+        sme.atmo.source = "marcs2012p_t1.0.sav"
+
     sme.atmo.method = "grid"
     sme.atmo.geom = "PP"
 
@@ -146,11 +150,32 @@ def doppler_effect(lambda_in, velocity_grid, velocity_shift, flux_orig):
 
     return res_flux
 
+def compute_spectrum(i, num_mu, num_wl, T_array, mu_array, range_wavelength):
+    vel, wave, intensity = generate_spec_pysme(T_array[i], mu_array, range_wavelength)
+
+    intensity_tmp = list(np.empty(num_mu))
+
+    for j in range(num_mu):
+        vel_general, wave_general, intensity_tmp[j] = degrade_resolution(wave, intensity[:, j], resol)
+
+    intensity_general = np.array(intensity_tmp).transpose()
+
+    result_spectrum = np.zeros((num_mu, num_wl, 3))
+
+    for j in range(num_mu):
+        result_spectrum[j, :, 0] = wave_general
+
+        result_spectrum[j, :, 1] = vel_general
+
+        result_spectrum[j, :, 2] = intensity_general[:, j]
+
+    return result_spectrum
+
 
 if __name__ == '__main__':
     print('Begin testing')
 
-    num_mu = 2
+    num_mu = 16
     num_radial_vel = 160
 
     resol = 15000
@@ -165,44 +190,61 @@ if __name__ == '__main__':
     mu_array = np.linspace(0.02, 1.0, num_mu)
     rad_vel_array = np.linspace(-300.0, 300.0, num_radial_vel)
 
-    num_T = 1 # len(T_array)
+    num_T = len(T_array)
 
     start_time = time.time()
 
-    for i in tqdm(range(num_T)):
+    print('Start zero point')
 
-        vel, wave, intensity = generate_spec_pysme(T_array[i], mu_array, range_wavelength)
+    vel, wave, intensity = generate_spec_pysme(T_array[0], mu_array, range_wavelength)
 
-        intensity_tmp = list(np.empty(num_mu))
+    intensity_tmp = list(np.empty(num_mu))
 
-        for j in range(num_mu):
-            vel_general, wave_general, intensity_tmp[j] = degrade_resolution(wave, intensity[:, j], resol)
+    for j in range(num_mu):
+        vel_general, wave_general, intensity_tmp[j] = degrade_resolution(wave, intensity[:, j], resol)
 
-        intensity_general = np.array(intensity_tmp).transpose()
+    intensity_general = np.array(intensity_tmp)
 
-        if i == 0:
+    num_wl = len(wave_general)
 
-            num_wl, num_mu = intensity_general.shape
+    result_spectrum = np.zeros((num_T, num_mu, num_wl, 3))
 
-            file_out = zarr.open('model_spec.zarr', 'w')
+    for j in range(num_mu):
+        result_spectrum[0, j, :, 0] = wave_general
 
-            T_ds = file_out.create_dataset("T", shape=(num_T,), dtype=np.float32)
-            v_ds = file_out.create_dataset("v", shape=(num_radial_vel,), dtype=np.float32)
-            mu_ds = file_out.create_dataset("mu", shape=(num_mu,), dtype=np.float32)
-            vel_axis_ds = file_out.create_dataset("velaxis", shape=(num_wl,), dtype=np.float32)
-            wl_ds = file_out.create_dataset("wavelength", shape=(num_wl,), dtype=np.float32)
-            spec_ds = file_out.create_dataset("spec", shape=(num_radial_vel, num_T, num_mu, num_wl), dtype=np.float32)
+        result_spectrum[0, j, :, 1] = vel_general
 
-            T_ds[:] = T_array[:num_T]
-            v_ds[:] = rad_vel_array
-            mu_ds[:] = mu_array
+        result_spectrum[0, j, :, 2] = intensity_general[j, :]
 
-        for j in range(num_mu):
-            spec_ds[:, i, j, :] = doppler_effect(wave_general, vel_general, rad_vel_array, intensity_general[:, j])
+    print('start parallel compute')
 
-        vel_axis_ds[:] = vel_general
-        wl_ds[:] = wave_general
+    result_spectrum[1:, :, :, :] = Parallel(n_jobs=-1)(delayed(compute_spectrum)(i, num_mu, num_wl, T_array, mu_array, range_wavelength) for i in range(1, num_T))
 
     end_time = time.time()
 
+    print('Compute is complete')
+
     print('time compute:', end_time - start_time)
+
+    file_out = zarr.open('model_spec.zarr', 'w')
+
+    T_ds = file_out.create_dataset("T", shape=(num_T,), dtype=np.float32)
+    v_ds = file_out.create_dataset("v", shape=(num_radial_vel,), dtype=np.float32)
+    mu_ds = file_out.create_dataset("mu", shape=(num_mu,), dtype=np.float32)
+    vel_axis_ds = file_out.create_dataset("velaxis", shape=(num_wl,), dtype=np.float32)
+    wl_ds = file_out.create_dataset("wavelength", shape=(num_wl,), dtype=np.float32)
+    spec_ds = file_out.create_dataset("spec", shape=(num_radial_vel, num_T, num_mu, num_wl), dtype=np.float32)
+
+    T_ds[:] = T_array[:num_T]
+    v_ds[:] = rad_vel_array
+    mu_ds[:] = mu_array
+
+    for i in range(num_T):
+
+        for j in range(num_mu):
+            spec_ds[:, i, j, :] = doppler_effect(result_spectrum[i, j, :, 0], result_spectrum[i, j, :, 1], rad_vel_array, result_spectrum[i, j, :, 2])
+
+        vel_axis_ds[:] = result_spectrum[i, 0, :, 1]
+        wl_ds[:] = result_spectrum[i, 0, :, 0]
+
+    print('Compute is done and data save')

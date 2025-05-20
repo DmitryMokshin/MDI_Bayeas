@@ -3,7 +3,7 @@ from scipy.ndimage import gaussian_filter1d
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 import astropy.constants as const
-
+import zarr
 
 def degrade_resolution(lambda_orig, flux_orig, R, new_delta_lambda=None):
     """
@@ -67,49 +67,26 @@ def doppler_effect(lambda_in, velocity_grid, velocity_shift, flux_orig):
     return res_flux
 
 
-# Пример использования с ненулевой скоростью
 if __name__ == "__main__":
+    # Если архив содержит группу (как папка)
+    zarr_group = zarr.open_group('model_spec.zarr', mode='r')
 
-# for j in range(n_mus):
-#     fi = np.fft.fft(spec[:, j])
-#     tmp = fi[None, :] * kernel
-#     spec_ds[:, i, j, :] = np.fft.ifft(tmp).real
+    print("Ключи в группе:", list(zarr_group.keys()))
 
-    # Исходный спектр (например, линия Hα на 6563 Å)
-    lambda_orig = np.linspace(6550, 6580, 5000)
-    flux_orig = np.exp(-(lambda_orig - 6563) ** 2 / (1 ** 2))  # Узкая линия
+    wavelength = zarr_group['wavelength'][:]
 
-    velocity = np.linspace(-100, 100, 20)
+    temp = zarr_group['T'][:]
+    mu = zarr_group['mu'][:]
 
-    # Понижаем разрешение и вводим скорость +200 км/с (красное смещение)
-    R = 15000
-    grid_v, lambda_new, flux_new = degrade_resolution(lambda_orig, flux_orig, R)
+    print(temp)
 
-    print(1 / (np.mean(np.diff(lambda_new)) / np.mean(lambda_new)))
+    spec = zarr_group['spec']
 
-    velocity_per_pxl = np.mean(np.diff(grid_v))
+    num_rad_vel, num_t, num_mu, num_inten = spec.shape
 
-    freq_grid = np.fft.fftfreq(len(lambda_new))
-
-    kernel = np.exp(-2 * 1j * np.pi * freq_grid[None, :] * velocity[:, None] / velocity_per_pxl)
-
-    fi = np.fft.fft(flux_new)
-
-    res_flux = np.fft.ifft(fi[None, :] * kernel).real
-
-    for i in range(len(velocity)):
-        plt.plot(lambda_new, res_flux[i])
+    for i in range(num_mu):
+        plt.plot([min(wavelength), max(wavelength)], [1.0, 1.0], label='cont')
+        plt.plot(wavelength, spec[int(num_rad_vel / 2), 0, i, :], label=r'$\mu$ = '+ f'{round(mu[i], 2)}')
+        plt.legend()
 
     plt.show()
-
-    # # Визуализация
-    # plt.figure(figsize=(12, 5))
-    # plt.plot(lambda_orig, flux_orig, label="Исходный спектр (R~∞, v=0 км/с)", alpha=0.5)
-    # plt.plot(lambda_new_no_vel, flux_new_no_vel, label=f"R={R}, v=0 км/с", lw=2, linestyle='--')
-    # plt.plot(lambda_new, flux_new, label=f"R={R}, v={velocity} км/с", lw=2, color='red')
-    # plt.xlabel("Длина волны (Å)")
-    # plt.ylabel("Поток")
-    # plt.legend()
-    # plt.title("Спектр после понижения разрешения и доплеровского смещения")
-    # plt.grid()
-    # plt.show()
