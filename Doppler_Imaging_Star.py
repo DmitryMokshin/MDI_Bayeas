@@ -134,8 +134,7 @@ class DopplerImaging(object):
 
         return c
 
-    def compute_stellar_spectrum(self, temperature, los, omega=0.0, vel_axis=None, clv=False, resolution=None,
-                                 reinterpolate_lambda=None):
+    def compute_stellar_spectrum(self, temperature, los, omega=0.0, clv=False, reinterpolate_lambda=None):
         """
         Compute the averaged spectrum on the star for a given temperature map and for a given rotation
 
