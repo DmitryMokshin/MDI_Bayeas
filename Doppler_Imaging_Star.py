@@ -211,15 +211,15 @@ class DopplerImaging(object):
 
 
 if __name__ == "__main__":
-    num_side = 2 ** 3
+    num_side = 2 ** 6
 
-    n_phases = 1
+    n_phases = 20
     inclination = 30.0
     los = np.zeros((n_phases, 2))
     for i in range(n_phases):
         los[i, :] = np.array([inclination * np.pi / 180.0, 2.0 * np.pi / n_phases * i])
 
-    star = DopplerImaging(num_side, regions=[[4477, 4485], [4709, 4717]])
+    star = DopplerImaging(num_side)
 
     T_surface = 12000.0 * np.ones(hp.nside2npix(num_side))
 
