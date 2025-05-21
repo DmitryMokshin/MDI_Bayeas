@@ -84,9 +84,13 @@ if __name__ == "__main__":
 
     num_rad_vel, num_t, num_mu, num_inten = spec.shape
 
-    for i in range(num_mu):
+    num_t_for_test = np.where((temp > 8000) & (temp <= 13000))
+
+    print(num_t_for_test)
+
+    for i in num_t_for_test[0]:
         plt.plot([min(wavelength), max(wavelength)], [1.0, 1.0], label='cont')
-        plt.plot(wavelength, spec[int(num_rad_vel / 2), 0, i, :], label=r'$\mu$ = '+ f'{round(mu[i], 2)}')
+        plt.plot(wavelength, spec[int(num_rad_vel / 2), i, 0, :], label=r'$T$ = '+ f'{temp[i]}')
         plt.legend()
 
     plt.show()

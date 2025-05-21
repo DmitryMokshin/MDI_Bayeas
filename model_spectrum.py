@@ -178,7 +178,7 @@ if __name__ == '__main__':
     num_mu = 16
     num_radial_vel = 160
 
-    resol = 15000
+    resol = 100000
 
     # range_wavelength = [[5985.1, 5989.0], [6000.1, 6005.0], [6022.0, 6026.0]]
 
