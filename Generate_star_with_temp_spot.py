@@ -51,8 +51,6 @@ class Surface(object):
 
         surface_map_temperature = hp.pixelfunc.reorder(surface_map_temperature, inp='RING', out='NESTED')
 
-        surface_map_temperature = hp.pixelfunc.reorder(surface_map_temperature, out='RING', inp='NESTED')
-
         return surface_map_temperature
 
 
@@ -60,7 +58,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    tmp = Surface(num_of_side=16, num_of_star=10,
+    tmp = Surface(num_of_side=16, num_of_star=1000,
                   file_name='./Star_maps/num_of_side_16_num_of_star_10/stars_T_spots.h5')
 
     print('Time compute:', time.time() - start_time)
