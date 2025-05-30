@@ -90,7 +90,7 @@ def generate_spec_pysme(temperature, mu_array, regions):
     sme.teff, sme.logg, sme.monh = temperature, 4.4, 0.0
     sme.abund = Abund.solar()
 
-    name_linelist = make_name_of_vald_list(temperature, [4400, 4900], 4.0, 4.4)
+    name_linelist = make_name_of_vald_list(temperature, [4400, 6500], 4.0, 4.4)
 
     vald = ValdFile('Line_list/' + name_linelist)
     sme.linelist = vald
@@ -178,11 +178,9 @@ if __name__ == '__main__':
     num_mu = 16
     num_radial_vel = 160
 
-    resol = 100000
+    resol = 50000
 
-    # range_wavelength = [[5985.1, 5989.0], [6000.1, 6005.0], [6022.0, 6026.0]]
-
-    range_wavelength = [4400, 4900.0]
+    range_wavelength = [5900, 6100.0]
 
     T_array = np.concatenate([np.arange(3000, 4000, 100.0), np.arange(4000, 6000, 250.0), np.arange(6000, 8000, 500.0),
                               np.arange(8000, 14000, 1000.0)])

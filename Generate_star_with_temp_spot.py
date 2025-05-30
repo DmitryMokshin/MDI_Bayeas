@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    tmp = Surface(num_of_side=16, num_of_star=1000,
-                  file_name='./Star_maps/num_of_side_16_num_of_star_10/stars_T_spots.h5')
+    tmp = Surface(num_of_side=32, num_of_star=100000,
+                  file_name='./Star_maps/num_of_side_32_num_of_star_1e5/stars_T_spots.h5')
 
     print('Time compute:', time.time() - start_time)
