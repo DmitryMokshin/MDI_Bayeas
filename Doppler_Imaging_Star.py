@@ -4,6 +4,7 @@ import healpy as hp
 import zarr
 import scipy.interpolate as interp
 import time
+from Parameters_models import AstrophysicalModelConstants
 
 
 def poly_area(x, y):
@@ -11,7 +12,7 @@ def poly_area(x, y):
 
 
 class DopplerImaging(object):
-    def __init__(self, num_of_side, regions=None, root_models=None, model_spec='model_spec.zarr'):
+    def __init__(self, num_of_side, regions=None):
         """
         This class does Doppler Imaging using several techniques
 
@@ -21,11 +22,11 @@ class DopplerImaging(object):
             number of sides in the Healpix pixellization.
         regions : array [[bounds]]
             array wavelength for line estimate
-        model_spec : str
-            name of archive with stellar atmosphere
-        root_models : str
-            way for directory with models
         """
+
+        parameters_model = AstrophysicalModelConstants()
+
+        model_spec = parameters_model.standard_model_spectrum_file_name
 
         self.num_of_side = int(num_of_side)
         self.hp_npix = hp.nside2npix(num_of_side)
@@ -48,10 +49,8 @@ class DopplerImaging(object):
             self.vec_boundaries[:, :, i] = hp.boundaries(self.num_of_side, i, nest=True)
 
         print(" Reading model spectra")
-        if root_models is None:
-            file_archive = zarr.open(model_spec, 'r')
-        else:
-            file_archive = zarr.open(f'{root_models}/' + model_spec, 'r')
+
+        file_archive = zarr.open(model_spec, 'r')
 
         self.temperature_model = file_archive['T'][:]
         self.mu_model = file_archive['mu'][:]

@@ -4,10 +4,23 @@ import healpy as hp
 import h5py
 from tqdm import tqdm
 import time
+from Parameters_models import AstrophysicalModelConstants
 
 class Surface(object):
-    def __init__(self, num_of_side, num_of_star, minimum_temperature_spot=3200, maximum_temperature_spot=5800,
-                 minimum_temperature_star=4000, maximum_temperature_star=5500, file_name=None):
+    def __init__(self, num_of_side, num_of_star, file_name=None):
+
+        # Initialize parameters for modeling
+
+        parameters_for_model = AstrophysicalModelConstants()
+
+        minimum_temperature_spot = parameters_for_model.minimum_temperature_spot
+        maximum_temperature_spot = parameters_for_model.maximum_temperature_spot
+
+        minimum_temperature_star = parameters_for_model.minimum_temperature_star
+        maximum_temperature_star = parameters_for_model.maximum_temperature_star
+
+        # Initialize parameters for modeling
+
         self.num_of_side = num_of_side
         self.num_of_pixels = hp.nside2npix(self.num_of_side)
         self.num_of_star = num_of_star

@@ -4,6 +4,7 @@ from tqdm import tqdm
 import numpy as np
 
 import Doppler_Imaging_Star as DIS
+from Parameters_models import AstrophysicalModelConstants
 
 import h5py
 import pickle
@@ -12,12 +13,19 @@ from joblib import Parallel, delayed
 
 
 def compute_observe_spectrum_different_phase(star, temperature_grid, result_wavelength_grid=None):
-    num_of_angles = np.random.randint(low=6, high=30, size=1)[0]
+    # Initialize parameters for modeling
 
-    rotation_velocity = np.random.uniform(low=10, high=300)
+    parameters_model = AstrophysicalModelConstants()
 
-    min_inclination = 10.0
-    max_inclination = 85.0
+    num_of_angles = np.random.randint(low=parameters_model.minimum_num_of_phases, high=parameters_model.maximum_num_of_phases, size=1)[0]
+
+    rotation_velocity = np.random.uniform(low=parameters_model.minimum_rotation_velocity, high=parameters_model.maximum_rotation_velocity)
+
+    min_inclination = parameters_model.minimum_inclination_angle
+    max_inclination = parameters_model.maximum_inclination_angle
+
+    # Initialize parameters for modeling
+
     cos_inclination = np.random.uniform(low=np.cos(max_inclination * np.pi / 180.0),
                                         high=np.cos(min_inclination * np.pi / 180.0))
     sin_inclination = np.sqrt(1.0 - cos_inclination ** 2)
@@ -106,8 +114,6 @@ def master_work(file_name_result_data, file_name_surfaces_archive, num_of_side=1
         list_wavelength = list(result_lambda_grid)
     else:
         list_wavelength = list(star.wavelength_model)
-
-    print(list_sin)
 
     with open(file_name_result_data + '_temperature.pkl', 'wb') as file_result:
         pickle.dump(list_temperature_grid, file_result)
